@@ -91,7 +91,7 @@ React是一个将数据渲染为HTML视图的开源JavaScript库。
 
 #### 使用JSX
 
-```html
+```react
 <script type='text/babel'> 
     // 1. 创建一个虚拟DOM
     let VDOM = (
@@ -106,7 +106,7 @@ React是一个将数据渲染为HTML视图的开源JavaScript库。
 
 #### 使用js语法创建
 
-```html
+```react
 <script type='text/javascript'>
     // 1.创建虚拟DOM(标签名，属性，内容)
     let VDOM = React.createElement('h1',{id:'atguigu'},'Hello, React!')
@@ -304,3 +304,347 @@ let arr2 = arr.map((item,index)=>{
         document.getElementById("test").innerHTML=arr2.join().replaceAll(",","");
 ```
 
+## React编程所需的工具
+
+需要浏览器的一个插件，名叫React Developer Tools，可以直接从插件商店里下载。
+
+![QQ20220220142327.png](https://img.pterclub.com/images/2022/02/20/QQ20220220142327.png)
+
+## 定义组件的两种方式
+
+组件的定义：**实现页面局部功能全部代码和<u>资源</u>的集合**。
+
+### 使用函数定义
+
+该方法便捷，但是有缺陷，虽然有补救措施，但是不推荐。
+
+#### js中调用函数的几种方式
+
+1.直接调用
+
+```javascript
+function test(){
+    console.log(this);
+}
+```
+
+直接使用函数名加小括号的方式调用该函数。
+
+```javascript
+test();
+```
+
+此时test函数里的this指向的就是window。
+
+![QQ20220220144808.png](https://img.pterclub.com/images/2022/02/20/QQ20220220144808.png)
+
+
+
+2.通过函数名.call()方式调用，这种调用方式会改变函数中的this指向，**参数依次传入**，完整调用格式如下：
+
+最直接的体现就是如果第一个例子中改为test.call(1)，控制台就会打印如下：
+
+![QQ20220220145500.png](https://img.pterclub.com/images/2022/02/20/QQ20220220145500.png)
+
+3.通过函数名.apply()调用，同样可以改变this指向，参数以数组方式传入。
+
+4.通过bind函数返回一个新的函数再调用
+
+
+
+以上四种具体区别可以总结为以下几点：
+
+> 该部分参考[(80条消息) JS中的call()和apply()方法和区别_世平那个张的博客-CSDN博客_js中apply和call的作用和区别是什么](https://blog.csdn.net/weixin_42321292/article/details/82352997)，感谢作者世平那个张！
+
+![QQ20220220150247.png](https://img.pterclub.com/images/2022/02/20/QQ20220220150247.png)
+
+
+![QQ20220220150254.png](https://img.pterclub.com/images/2022/02/20/QQ20220220150254.png)
+
+![QQ20220220150304.png](https://img.pterclub.com/images/2022/02/20/QQ20220220150304.png)
+
+
+
+#### 具体写法
+
+```react
+<body>
+    <div id="test"></div>
+
+    <script type="text/babel">
+        // 1.定义一个组件(函数式)
+        function Demo(){
+            console.log(this) // 此处的this是undefined，因为经过babel翻译，开启了严格模式
+            return <h2>我是用函数定义的组件（适用于【简单组件】的定义）</h2> // 组件标签
+        }
+
+        // 2.渲染组件到页面
+        ReactDOM.render(<Demo/>,document.getElementById('test'))
+    </script>
+</body>
+```
+
+注意点：
+
+（1）构成组件的函数名称的首字母必须大写，具体原因与babel翻译有关。
+
+> 此处参考[(80条消息) react声明组件时，第一个字母必须大写，为什么呢_codingWeb的博客-CSDN博客_react 组件大写](https://blog.csdn.net/fesfsefgs/article/details/105599570)，感谢作者codingWeb！
+
+总结来说，如果不首字母大写，babel在转义时就会把其当成一个字符串传入React.createElement()这个方法，如果首字母大写了，babel在转义时就会传入一个变量。具体如下图所示：
+
+![QQ20220220163329.png](https://img.pterclub.com/images/2022/02/20/QQ20220220163329.png)
+
+
+
+（2）在渲染时，组件名必须使用<组件名/>的这种**闭包形式**（当然<组件名></组件名>也可以）。
+
+（3）在执行了ReactDOM.render(<Demo/>....)后发生了什么?
+
+①React解析组件标签，寻找Demo组件的定义位置
+
+②React发现Demo组件是用函数定义的，随后React去直接调用Demo函数，将【**返回的值**】渲染到页面
+
+（4）该函数形式定义组件所存在的**残疾**的部分就是：函数内部的this是undefined，具体原因是babel翻译时开启了严格模式，不允许直接指向window。
+
+### 使用类定义
+
+写法较为繁琐，但是功能完备，不残疾，推荐。
+
+#### 复习js中的类
+
+1.类中的构造器**不是必须**要写的，如果想给实例添加一些自己独有的属性，那么就要写构造器；
+
+2.如果A类继承了B类，且A类写了构造器，那么在A类的构造器中**必须调用super**。
+
+3.类中的方法是放在类的原型对象上的，供实例使用，如果是通过实例调用的方法，那么方法中的this就是实例对象。
+
+#### 具体写法
+
+```react
+<div id="test"></div>
+    <script type="text/babel">
+        // 1.定义一个组件（类式）
+      class Demo extends React.Component{
+          /**
+           * 1. render方法是放在哪里的？ ———— Demo的原型对象上，供实例使用
+           * 2. render中的this是谁？ ———— Demo的实例对象
+          */
+        render(){
+            console.log(this); // Demo类的实例对象 <=> Demo组件的实例对象 <=> 也称“Demo组件对象”
+            return <h2>我是用类定义的组件（适用于【复杂组件】的定义）</h2>
+        }
+      }
+      // 2.渲染组件到页面
+      ReactDOM.render(<Demo/>, document.getElementById('test'))
+    </script>
+```
+
+注意点：
+
+①类组件必须继承React.Component。
+
+②类组件内部必须重新render方法，同时该render方法必须有返回值，因为React会**调用**该组件的render方法来获取返回值。
+
+③执行了ReactDOM.render(<Demo/>...后发生了什么)
+1.React解析组件标签，寻找Demo组件的定义
+2.React发现Demo组件是用类定义的，React实例创建了一个Demo的实例对象-D
+3.通过D去调用到了render方法，D.render()。
+
+## 组件实例三大属性
+
+注意：这里的三大属性主要是针对通过**类定义**的组件！
+
+### state
+
+#### 简介
+
+1.state是组件对象最重要的相互ing，值是对象（可以包含多个key-value的组合）
+
+2.组件又被称为‘状态机’，通过更新组件的state来更新对应的页面显示（重新渲染组件）
+
+### 代码
+
+实现需求：现在有一段话“今天天气很凉爽”，当鼠标点击凉爽时，这两个字就会变成炎热，点击炎热时这两个字就会变成凉爽。
+
+#### 一般实现
+
+```react
+<script type="text/babel">
+        class Weather extends React.Component{
+            constructor(props) {
+                super(props)
+                this.state = {isHot:false} // 初始化状态
+            }
+            render(){
+                return <h1 onClick={this.changeWeather}>今天天气很{this.state.isHot ? '炎热' : '凉爽'}</h1>
+            }
+            changeWeather(){
+                const isHot = this.state.isHot
+                this.setState({isHot:!isHot})
+            }
+        }
+        ReactDOM.render(<Weather/>,document.getElementById('test'))
+
+    </script>
+```
+
+##### 注意点：
+
+1.原生属性比如是onclik在react中需要写成onClick，以驼峰的方式命名！
+
+```react
+render(){
+                return <h1 onClick={this.changeWeather}>今天天气很{this.state.isHot ? '炎热' : '凉爽'}</h1>
+            }
+```
+
+2.react中事件绑定的方式与原生js有些不同。
+
+在原生js和html中，可以直接写函数名加小括号，这样的效果是当我们点击时才会调用show函数，不会主动调用。
+
+```html
+<h1 onclick="show()">今天天气不错</h1>
+```
+
+但是在react中，要想实现以上效果，则函数名后面不能加小括号。若加了小括号，函数就会自动调用无论你是否有点击事件的发生。
+
+```react
+            render(){
+                return <h1 onClick={this.changeWeather}>今天天气很{this.state.isHot ? '炎热' : '凉爽'}</h1>
+            }
+```
+
+3..在JSX代码里，在组件类外部直接写function，然后function中的this因为babel的严格模式，指向的会是undefined！即：**在严格模式下禁止this关键字指向全局对象**！
+
+4.在js中，类中函数方法的调用者是类的实例对象，如果类中的一个函数方法中内部要调用另一个函数方法，必须要用this.函数名()的形式来调用。
+
+```javascript
+class dog{
+    bark(){
+        console.log("bark");
+    }
+    cry(){
+        this.bark();//必须加上this，才能调用一个类中的另一个方法
+        console,log("bark");
+    }
+}
+```
+
+5.js中的类中的this详解，此处代码没有被babel包裹
+
+```javascript
+class Dog {
+    constructor(name,age){
+        this.name = name
+        this.age = age
+    }
+    bark(){
+        console.log('bark的this是：',this);
+    }
+}
+const d = new Dog('DOGE',4)
+d.bark();//此时this指向的就是dog
+```
+
+（1）当类中的函数方法被类的实例对象调用时，this指向的就是类的实例。但是如果通过<u>第二个变量得到了堆中函数的位置</u>，直接通过**第二个变量**直接**调用**，虽然是全局调用，但是这里this指向的就是undefined了，因为类中所有定义的方法，浏览器在运行时，全都加上了use strict，**在严格模式禁止this关键字指向全局对象**。
+
+```javascript
+const d = new Dog('DOGE',4)
+const x = d.bark
+x() 
+```
+
+![QQ20220220220535.jpg](https://img.pterclub.com/images/2022/02/20/QQ20220220220535.jpg)
+
+（2）但如果是直接是对象的话，同样条件下调用，this得到的就是window了
+
+```javascript
+let obj = {
+     a:1,
+     b:2,
+     c:function(){
+         console.log(this);
+     }
+}
+const y = obj.c
+y()//会打印windo
+```
+
+(3)严格模式可以局部开启的，如下面的代码所示
+
+```javascript
+function demo1(){
+        'use strict' //局部开启严格模式
+        console.log('demo1:',this);
+   }
+   function demo2(){
+        console.log('demo2:',this);
+   }
+demo1()
+demo2()
+```
+
+![QQ20220220220949.jpg](https://img.pterclub.com/images/2022/02/20/QQ20220220220949.jpg)
+
+可以看到，开启了**严格模式**的函数直接调用this的话指向的就不是window了。
+
+6.类中定义的函数方法都是在原型上的
+
+![QQ20220220222100.jpg](https://img.pterclub.com/images/2022/02/20/QQ20220220222100.jpg)
+
+7.通过bind改变this指向，bind改完this指向后会返回一个新的改过this的函数
+this.changeWeather = this.changeWeather.bind(this)
+这句话先读赋值语句的右侧，先从构造器的this指向(就是Weather)的**原型**中找到changeWeather，把该changeWeather中的this改好了之后再赋值给自己，这样Weather的实例对象就有了changeWeahter方法了。做完上述步骤后，就会有两个changeWeather，一个在对象的内部原型外部，还有一个在原型内部，前面一个的this是正常的不受严格模式约束的，后面一个this是受严格模式约束的。
+
+![QQ20220220205448.jpg](https://img.pterclub.com/images/2022/02/20/QQ20220220205448.jpg)
+
+8.state**无法直接修改**，需要用setState来修改。这是state的一大特性！
+
+#### 简便写法
+
+```react
+    <div id="test"></div>
+
+    <script type="text/babel">
+        class Weather extends React.Component {
+            state = { isHot: false }
+            render() {
+                console.log('render里的this:', this)
+                return <h1 onClick={this.changeWeather}>今天天气很{this.state.isHot ? '炎热' : '凉爽'}</h1>
+            }
+
+            // 组件类中程序员定义的事件回调，必须写成赋值语句+箭头函数
+            // 避免了this为undefined的问题
+            changeWeather = ()=> {
+                console.log('changeWeather里的this', this);
+                const isHot = this.state.isHot
+                this.setState({isHot:!isHot})
+            }
+        }
+        ReactDOM.render(<Weather />, document.getElementById('test'))
+
+    </script>
+```
+
+##### 说明
+
+1.在类中直接写一个赋值语句例如a=1，等价于给这个类新增一个属性a，其值为1。
+2.changeWeather也可以用同样的方式简写，但是**不能用传统的function的方式声明**，这样会被babel强制应用严格模式。所以必须使用箭头函数，**箭头函数内部没有this**，当在箭头函数内部使用this时会调用箭头函数外部的this。
+
+这样就是不行的！
+
+```javascript
+changeWeather = function() {
+                console.log('changeWeather里的this', this);
+                const isHot = this.state.isHot
+                this.setState({isHot:!isHot})
+            }
+```
+
+
+
+### props
+
+
+
+### refs与事件处理
