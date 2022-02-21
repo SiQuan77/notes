@@ -645,6 +645,181 @@ changeWeather = function() {
 
 ### props
 
+#### 定义
 
+props是专门设计为从组件外部收集信息传递给组件内部的类组件里的对象。
+
+#### 用法
+
+目前有个需求就是在网页上显示两个人的姓名、性别和年龄。
+
+
+
+1.分别传递标签属性
+
+```react
+	<div id="test"></div>
+    <div id="test2"></div>
+    <script type="text/babel">
+        // 1.定义一个Person组件
+        class Person extends React.Component{
+          render(){
+              const {name,sex,age} = this.props
+              return (
+                  <ul>
+                      <li>NAME: {name}</li>
+                      <li>GENDER: {sex}</li>
+                      <li>AGE: {age}</li>
+                  </ul>
+              )
+          }
+        }
+        // 2.渲染组件到页面（分别传递标签属性）
+        ReactDOM.render(<Person name="老刘" sex="female" age="23" />,document.getElementById('test'))
+</script>
+```
+
+效果图：
+
+![QQ20220221213421.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221213421.jpg)
+
+2.批量传递标签属性
+
+```react
+// （模拟一个服务器返回人的数据）
+const p1 = {
+     name:'强哥',
+     sex:'女',
+     age: 19
+}
+// 批量传递标签属性
+ReactDOM.render(<Person {...p1}/>, document.getElementById('test2'))
+```
+
+#### 对props进行限制
+
+react提供方法给props进行限制，不过需要引入prop-types.js。
+
+对props限制既可以限制类型，也可以限制必须传哪些属性，也可以设置属性的默认值。
+
+```react
+<script type="text/babel">
+        class Person extends React.Component {
+            state = {} // 任何时候状态放第一
+            static propTypes = {
+                name: PropTypes.string.isRequired, // .isRequired要求必须传
+                age: PropTypes.number,
+                sex: PropTypes.string
+            }
+            static defaultProps = { // 默认值
+                age: 18
+            }
+            render() {
+                let { name, sex, age } = this.props
+                return (
+                    <ul>
+                        <li>姓名：{name}</li>
+                        <li>性别：{sex}</li>
+                        <li>年龄：{age + 1}</li>
+                    </ul>
+                )
+            }
+        }
+        const p1 = {
+            name: 'Nicolas',
+            sex: 'male',
+            age: 27,
+        }
+        ReactDOM.render(<Person {...p1} />, document.getElementById('test'))
+</script>
+```
+
+static propTypes中可以限制props属性的类型和是否是必须传入的，static defaultProps可以设置props的默认值。假如没有传入指定类型，虽然页面可以显示但是浏览器控制台就会报错！
+
+比如给age传入了一个字符串
+
+![QQ20220221223032.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221223032.jpg)
+
+#### 注意点和补充复习知识
+
+1.props对象中的属性里的值是**只读**的，在赋值之后无法再修改。
+
+比如props里有一个name属性，则以下代码会在浏览器中报错！
+
+![QQ20220221213949.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221213949.jpg)
+
+![QQ20220221214004.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221214004.jpg)
+
+
+2.关于ES7中的打包和拆包功能复习：
+
+有关具体的展开功能的详细介绍，可以查看MDN的链接：[展开语法 - JavaScript | MDN (mozilla.org)](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Reference/Operators/Spread_syntax)
+
+（1）拆包
+
+①...展开语法**可以对数组使用**。
+
+```javascript
+let arr = [4,5,6,7]
+console.log(arr); // (5) [1, 3, 5, 7, 9]
+console.log(...arr); // 1 3 5 7 9  （拆包）
+
+let arr2 = [1,2,3,...arr,8] // 拆包
+console.log(arr2);// (8) [1, 2, 3, 4, 5, 6, 7, 8]
+```
+
+②在原生js中，展开语法无法对对象展开，因为对象并没有迭代器。
+
+```javascript
+let obj = {name:'圆圆的海峰',age:18,sex:'女'}
+let obj2 = {nationality:'Chinese',height:'180cm'}
+console.log(...obj)//这样写就会报错
+```
+
+![QQ20220221214352.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221214352.jpg)
+
+③展开语法可以对对象使用，条件是要包在一个对象内部。比如
+
+```javascript
+console.log(...obj); // {name:'圆圆的海峰',age:18,sex:'女'}
+console.log({...obj,...obj2}); // {name: '圆圆的海峰', age: 18, sex: '女', nationality: 'Chinese', height: '180cm'}
+console.log({...obj,name:'LX'}); // {name: 'LX', age: 18, sex: '女'}
+```
+
+（2）打包，最典型的使用场景就是当一个函数不知道自己接受的参数有多少个时，可以用...params来将参数打包起来。
+
+```javascript
+function demo(...params){ // 打包
+   console.log('我收到的参数为：', params);
+}
+demo(1,2,3)
+```
+
+![QQ20220221214932.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221214932.jpg)
+
+3.在原生里...无法展开对象，但是在react里可以，但仅适用于**传递标签属性**，为什么要加{}呢？是因为是模板语法，JSX的基本语法中遇到 HTML 标签（以 < 开头），就用 HTML 规则解析；遇到代码块（以 { 开头），就用 JavaScript 规则解析；
+所以在react中{...obj}就等价于js中的...obj。
+
+4.关于class中的static属性
+
+在class中，未加static的属性会出现在类的实例对象的属性中,而加了static的属性就会出现在类的属性中，例如：
+
+```javascript
+class Dog {
+   constructor(){
+	}
+    run(){
+	}
+    a = 1
+    static b = 2
+}
+const d = new Dog()
+console.log(d);
+console.log(Dog.b);//2  即 b是在Dog类上的，可以通过类名加上属性名进行调用
+```
+
+![QQ20220221223548.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221223548.jpg)
+
+这也是限制props的几个属性前面要加static的原因，因为加了的话就会随着类走，也比较方便。
 
 ### refs与事件处理
