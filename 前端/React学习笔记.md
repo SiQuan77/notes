@@ -651,6 +651,8 @@ props是专门设计为从组件外部收集信息传递给组件内部的类组
 
 #### 用法
 
+##### 在类组件中使用props
+
 目前有个需求就是在网页上显示两个人的姓名、性别和年龄。
 
 
@@ -694,6 +696,41 @@ const p1 = {
 }
 // 批量传递标签属性
 ReactDOM.render(<Person {...p1}/>, document.getElementById('test2'))
+```
+
+##### 在函数式组件中使用props
+
+可以通过函数参数的形式把props传入到函数内部，但是对props的限制的语句就只能写在外部了，不能像类组件那样写在组件的内部。
+
+```react
+    <script type="text/babel">
+        function Person(props) {  // 用参数传入props
+            const { name, age, sex } = props
+            return (
+                <ul>
+                    <li>姓名：{name}</li>
+                    <li>性别：{sex}</li>
+                    <li>年龄：{age}</li>
+                </ul>
+            )
+        }
+        // 限制只能写在外面
+        Person.propTypes = {
+            name: PropTypes.string.isRequired, // .isRequired要求必须传
+            age: PropTypes.number,
+            asex: PropTypes.string
+        }
+        Person.defaultProps = { // 默认值
+            age: 18
+        }
+
+        const p1 = {
+            name: 'Nicolas',
+            sex: 'male',
+            age: 27,
+        }
+        ReactDOM.render(<Person {...p1} />, document.getElementById('test'))
+    </script>
 ```
 
 #### 对props进行限制
@@ -749,7 +786,6 @@ static propTypes中可以限制props属性的类型和是否是必须传入的�
 ![QQ20220221213949.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221213949.jpg)
 
 ![QQ20220221214004.jpg](https://img.pterclub.com/images/2022/02/21/QQ20220221214004.jpg)
-
 
 2.关于ES7中的打包和拆包功能复习：
 
@@ -822,4 +858,240 @@ console.log(Dog.b);//2  即 b是在Dog类上的，可以通过类名加上属性
 
 这也是限制props的几个属性前面要加static的原因，因为加了的话就会随着类走，也比较方便。
 
+5.类式组件中的构造器**完全可以省略**。若写了构造器则super必须调用，且当需要在构造器中通过this.props取值时，那么props要传给super。
+
 ### refs与事件处理
+
+简单来说ref就是react中标签中id的替代者，不过react建议能不用ref就不用ref，因为ref会占用的内存比较大！下面会有解决办法的！
+
+#### 字符串形式的refs
+
+不推荐使用，略过。
+
+#### 回调形式的refs
+
+refs写成函数形式后，react来帮我们调用，函数的参数就是包含ref属性的标签。但也有点问题，不推荐。
+
+#### createRef形式的ref 
+
+使用React.createRef()在类内部创建容器后，将需要操作的ref存入容器中，最后再在函数内部直接调用容器内部的ref。
+
+```react
+    <script type="text/babel">
+    class Demo extends React.Component{
+        container = React.createRef()
+        container2 = React.createRef()
+        render(){
+            return(
+                <div>
+                    <input type="text" ref={this.container} />
+                    <button onClick={this.show}>点我提示左侧数据</button>
+                    <input type="text" ref={this.container2} onBlur={this.show2} placeholder="失去焦点提示数据"/>
+                </div>
+            )
+        }
+        
+        show = ()=>{
+            console.log(this.container); // {current: input}
+            alert(this.container.current.value)
+        }
+        show2 = ()=>{
+            alert(this.container2.current.value)
+        }
+
+    }
+    ReactDOM.render(<Demo/>,document.getElementById('test'))
+    </script>
+```
+
+#### 事件处理
+
+1. 通过onXxxx属性指定事件处理函数（注意大小写）
+   (1) React使用的是自定义（合成）事件，而不是使用的原生DOM事件这样有利于**提高效率**，因为原生事件中如果有用不到的属性，它还是会给你显示出来，而react的自定义事件中的属性，用到了才会给你，若没有用到就不会给，提高了效率。
+   (2) React中的事件是通过**事件委托**方式处理的（委托给组件**最外层**的元素）
+2. 通过**event.target**得到事件发生的DOM元素对象
+
+## 非受控组件和受控组件
+
+### 非受控组件
+
+#### 定义
+
+表单中的数据，在需要的时候“现用现取”，即通过ref获得到节点，进而访问到value值。这里的非受控主要指的是数据与组件的state没有建立起联系来，如果一输入，value值就往状态state里面跑，那就不是非受控组件了。
+
+#### 示例代码
+
+这里的ref使用了回调形式。
+
+```react
+<script type="text/babel">
+      class Login extends React.Component{
+          render(){
+              return(
+                  <form onSubmit={this.handleLogin}>
+                    {
+                }
+                    用户名：<input type="text" ref={c => this.userNameNode = c} /><br/>
+                    密码：<input type="password" ref={c => this.passwordNode = c}/><br/>
+                    <button>登陆</button>
+                    </form>
+              )
+          }
+          handleLogin = ()=>{
+              const {userNameNode,passwordNode} = this
+              console.log(userNameNode);
+              alert(`用户名：${userNameNode.value}, 密码：${passwordNode.value}` ) 
+          }
+      }
+      ReactDOM.render(<Login/>,document.getElementById('test'))
+</script>
+```
+
+### 受控组件
+
+#### 定义
+
+表单中输入类的DOM，随着用户的输入，将值**自动收集**到State中，那么就称为受控组件。
+
+#### 代码
+
+##### 最垃圾的写法，有一个属性就写一个函数
+
+1.以下代码有弊端，有一个属性就要写一个save函数比较繁琐。 
+
+为什么不写this.saveDate("password")来用一个函数来完成各个函数的功能呢？因为如果写了saveDate("password")的话就是一个函数调用了，react就会**自动调用**这个函数，并把这个函数的返回值给onchange，在这里的场景下与我们的需求相悖。
+
+```react
+class Login extends React.Component{
+          state = {
+              username: "",
+              password: "123"
+          }
+          render(){
+              return(
+                  <form onSubmit={this.handleLogin}>
+                    {
+                }
+                    用户名：<input type="text" onChange={this.saveUsername} /><br/>
+                    密码：<input type="password" onChange={this.savePassword} /><br/>
+                    <button>登陆</button>
+                    </form>
+              )
+          }
+          // 保存用户名到State中
+          saveUsername = (event)=>{
+              this.setState({username:event.target.value})
+              //setState不会造成其他state属性值的改变或者丢失，只会改变setState函数传入的属性值。
+          }
+          // 保存密码到state中
+          savePassword = (event)=>{
+              this.setState({password:event.target.value})
+          }
+          handleLogin = (event)=>{
+              event.preventDefault()
+              const {username,password} = this.state
+              alert(`用户名：${username}, 密码：${password}`) 
+          }
+      }
+ReactDOM.render(<Login/>,document.getElementById('test'))
+```
+
+**注意**：setState**不会**造成其他state属性值的改变或者丢失，只会改变setState函数传入的属性值。
+
+##### 使用高级函数和函数的柯里化
+
+1.高级函数和函数柯里化的定义：
+
+（1）高阶函数：如果一个函数符合下面2个规范中的任意一个，该函数即为高阶函数
+
+​		①若A函数**接收的参数**是一个**函数**，那么A即为高阶函数
+​		②若A函数调用的**返回值**依然是一个**函数**，那么A为高阶函数
+​		常见的高阶函数：Promise,setTimeout,arr.map(),bind
+
+（2）函数的柯里化：通过函数调用继续返回函数的方式，实现多次接收参数最后统一处理的函数编码形式。
+
+比如：
+
+```javascript
+//正常函数写法
+function sum(a,b,c){
+     return a+b+c
+}
+```
+
+如果使用柯里化写法和高级函数：
+
+```javascript
+function sum(a)
+{
+    return (b) => {
+        return (c) => {
+            return a + b + c ;
+        }
+    }
+}
+```
+
+2.使用这两项技术来解决受控组件问题
+
+```javascript
+ class Login extends React.Component{
+          state = { // 初始化状态
+              username: "",
+              password: "123"
+          }
+          render(){
+              return(
+                  <form onSubmit={this.handleLogin}>
+                    {
+                }
+                    用户名：<input type="texnCht" onChange={this.saveFormData("username")} /><br/>
+                    密码：<input type="password" onChange={this.saveFormData("password")} /><br/>
+                    <button>登陆</button>
+                    </form>
+              )
+          }
+          saveFormData = (type) =>{
+              return (event)=>{
+                  this.setState({[type]:event.target.value})
+                  {/*这里的type加中括号的原因看下面的备注*/}
+                }
+          }
+          handleLogin = (event)=>{
+              event.preventDefault()
+              const {username,password} = this.state
+              alert(
+                  `用户名：${username}, 密码：${password}`
+              ) 
+          }
+
+      }
+      ReactDOM.render(<Login/>,document.getElementById('test'))
+```
+
+3.在对象中，我们给对象的属性赋值有两种方式，假如我想给一个Person对象赋值一个属性，属性名字叫name而其中的value值是张三
+
+（1）第一种赋值方式，直接用对象.加上属性名的方式给对象添加属性。
+
+```javascript
+let Person = {}
+Person.name="张三"
+```
+
+注意如果有一个字符串变量叫name，用.的方式的话就会失效！
+
+```javascript
+let a='name'
+Person.a="张三"//这样就会变成Person里有个属性a，这个属性的值为张三
+```
+
+（2）第二赋值属性的方式，使用中括号，这种方式可以读取变量作为属性的名称
+
+```javascript
+Person['name']='张三'
+//等价于
+let a = 'name'
+Person[a]='张三'
+```
+
+所以这里也是上面的type要加**中括号**的原因！
