@@ -1095,3 +1095,123 @@ Person[a]='张三'
 ```
 
 所以这里也是上面的type要加**中括号**的原因！
+
+##### 不使用高级函数和柯里化
+
+我们研究一下JSX或者说reac中标签里onChange后面跟的东西，首先跟着的必须是一个函数，但是如果是传统写法即函数名加上()的话就会直接调用，使用传统方式的话必须不能加括号，这就导致了不能传递type的值。
+
+如果使用箭头函数，因为箭头函数写出来并不是调用的，在箭头函数的函数体内部写一个统一的处理data的函数，该函数接收event和type做参数，则就可以解决问题了。
+
+代码如下：
+
+```react
+用户名：<input type="texnCht" onChange={event => this.saveFormData(event, "username")} /><br />
+密码：<input type="password" onChange={event => this.saveFormData(event, "password")} /><br />
+```
+
+同时saveFormData函数如下所示：
+
+```javascript
+saveFormData = (event, type) => {
+       this.setState({ [type]: event.target.value})
+}
+```
+
+这样就解决了，既没有返回一个函数，又没有以函数作为参数。
+
+## 组件的生命周期
+
+### 旧生命周期
+
+#### 图示
+
+![QQ20220223152421.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223152421.jpg)
+
+简而言之，在render函数执行的前后阶段react会自动调用一些函数，只不过我们没有写的话就默认是没有函数体的函数。
+
+比如componentWillMount就是在render之前要执行的，那个函数的意思就是组件将要挂载时执行。
+
+#### 例子
+
+假设现有一个需求，要实现页面上的一段文字渐变成透明的，并且还有一个按钮，点击按钮之后组件就卸载并且消失。
+
+渐变可以通过定时器循环执行来递减文字的透明度，但是这个递减过程放在哪里比较关键，不能放在render中。
+
+```react
+<script type="text/babel">
+    class Life extends React.Component {
+        state = {
+            opacity:1
+        }
+        render() {  // 1+n次，随着状态改变即调用
+            console.log('render');
+            const {opacity} = this.state
+            return (
+                <div>
+                    <h1 style={{opacity}}>分手了怎么办？</h1>
+                    <button onClick={this.death}>不活了</button>
+                </div>
+            )
+        }
+        componentDidMount(){ // 1次
+            console.log('componentDidMount');
+            this.timer = setInterval(() => {
+                //1.获取原来的opacity
+                let {opacity} = this.state
+                //2.递减
+                opacity -= 0.1
+                if(opacity <= 0) opacity = 1
+                //3.赋回去
+                this.setState({opacity})
+            }, 200);
+        }
+        componentWillUnmount(){ // 1次
+            console.log('componentWillUnmount');
+            clearInterval(this.timer)
+        }
+        death = ()=>{
+            ReactDOM.unmountComponentAtNode(document.getElementById('test'))
+        }
+    }
+    ReactDOM.render(<Life />, document.getElementById('test'))
+</script>
+```
+
+componentWillUnmount()是将要卸载时执行的函数，componentDidMount()是已经挂载完毕后执行的函数，这些生命周期函数（钩子函数）都仅执行一次。
+
+#### 总结钩子函数
+
+1.初始化阶段：由ReactDOM.render()触发 --- 初次渲染
+      （1） constructor()
+      （2）componentWillMount()（**在新版本中被不推荐使用了**）
+      （3）render()
+      （4）componentDidMount()，重要，比如开启定时器、发送ajax请求、消息订阅等等
+
+2. 更新阶段：由组件内部this.setState()或父组件重新render触发
+      （1） shouldComponentUpdate()
+      （2）componentWillUpdate()也比较重要，主要做一些收尾的事情，例如关闭定时器。（**在新版本中被不推荐使用了**）
+      （3）render()，老大哥地位！
+      （4）componentDidUpdate()
+3. 卸载组件：由ReactDOM.unmountComponentAtNode()触发
+     （1）componentWillUnmount()（**在新版本中被不推荐使用了**）
+
+#### 注意点
+
+1.render函数会执行**1+n**次，其中的1表示一上来就会调用1次，n次表示如果组件里的state改变了，那就会render一次。
+
+2.透明度递减函数不能放在render里，因为会递归调用很多很多次，会导致页面**频繁渲染**。放在构造器里虽然可行但是并不是正确的放置方式。正确的放置位置应在钩子函数中即组件的生命周期函数中。
+
+3.shouldComponentUpdate可以看做是组件更新的一个**阀门**，该函数返回为**true**时，组件才能**继续更新**否则组件不会更新。不过forceUpdate()可以**绕过钩子**，强制更新
+
+4.阀门关闭之后，调用setState()只是不render但是内部的state值还是会**根据具体setState()函数进行修改调整**。如果强制更新的话，会直接更新为最新的state值。
+
+5.componentWillReceiveProps表示的是父组件给子组件传props参数时在子组件中调用的函数，并且只有在父组件**第二次及以上调用**render时才会调用这个函数，父组件**第一次调用render时并不会自动调用这个钩子函数**。
+
+### 新生命周期
+
+从react17.0之后就是新生命周期了，但是依然可以用旧钩子，不过并不推荐，在18.0版本及以后，旧钩子必须加上UNSAFE_前缀才能正常奏效工作了。（此处添加UNSAFE与安全性并无直接关系，而是表示使用这些生命周期的代码在React的未来版本中有可能出现bug，尤其是在启用异步渲染之后）
+
+componentWillMount()，componentWillUpdate()，componentWillUnmount()
+
+![QQ20220223163500.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223163500.jpg)
+
