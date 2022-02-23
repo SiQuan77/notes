@@ -1209,9 +1209,77 @@ componentWillUnmount()是将要卸载时执行的函数，componentDidMount()是
 
 ### 新生命周期
 
-从react17.0之后就是新生命周期了，但是依然可以用旧钩子，不过并不推荐，在18.0版本及以后，旧钩子必须加上UNSAFE_前缀才能正常奏效工作了。（此处添加UNSAFE与安全性并无直接关系，而是表示使用这些生命周期的代码在React的未来版本中有可能出现bug，尤其是在启用异步渲染之后）
+从react17.0之后就是新生命周期了，但是依然可以用旧钩子，不过并不推荐，在18.0版本及以后，旧钩子必须加上UNSAFE_前缀才能正常奏效工作了。（此处添加UNSAFE与安全性并无直接关系，而是表示使用这些生命周期的代码在React的未来版本中有可能出现bug，尤其是在启用异步渲染之后） 
 
 componentWillMount()，componentWillUpdate()，componentWillUnmount()
 
 ![QQ20220223163500.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223163500.jpg)
+
+官网上，把不常用的钩子函数去掉之后的生命周期图如下所示：
+
+![QQ20220223191927.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223191927.jpg)
+
+因为新生命周期中，getDerivedStateFromProps和getSnapshotBeforeUpdate很少用。
+
+getDerivedStateFromProps可以接收到props，然后可以由props派生状态以及值并且更新原有的state值，通过return状态对象的方式。使用这个方法之后，setstate和初始化等改变状态的方法都不管用了，最终还是以getDerivedStateFromProps的return的状态对象为准。
+使用这个函数的场景是：**当组件中的state完全取决于外部传来的props时。** 
+简单来说<u>没锤子用</u>。
+
+getSnapshotBeforeUpdate用的也很少，所以就不多介绍了。
+
+# React脚手架
+
+## 有关概念
+
+1.xxx脚手架：用来帮助程序员快速创建一个基于xxx库的模板项目
+
+（1）包含了所有需要的配置（语法检查、jsx编译、devServer...）
+
+（2）下载好了所有相关的依赖
+
+（3）可以直接运行一个简单效果
+
+2.react提供了一个用于创建react项目的脚手架库：create-react-app
+
+3.项目的整体技术架构为：react+wbpack+es6+eslint
+
+4.使用脚手架开发的项目的特点：模块化、组件化、工程化
+
+## 有关命令
+
+### 创建项目并启动
+
+1.全局安装：npm install -g create-react-app
+
+2.切换到想创项目的目录：使用命令：create-react-app hello-react
+
+3.进入项目文件夹：cd hello-react
+
+4.启动项目：npm start
+
+### 官方项目目录分析
+
+![QQ20220223213759.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223213759.jpg)
+
+1.分析示例代码可以得到以下信息
+（1）所有组件都当做是App组件的孩子，这样渲染组件的时候只需要渲染App即可
+（2）使用了大量的模块化语句进行编写，使用了默认暴露
+（3）reportWebVitals主要用于分析网页性能
+（4）App组件外层包了一对<React.StrictMode></React.StrictMode>用于将代码开启react的严格模式，只要写了不被建议的写法，就会飘红报错！学的时候我们并不开启
+（5）setupTests.js主要用于单元测试
+（6）index.js是webpack打包的入口，而App.js是react的App根组件，这两个js文件是我们最需要关注的两个文件。
+（7）App.test.js也是做测试用的，不推荐使用了。
+（8）robots.txt，爬虫协议文件，用于说明哪些爬虫可以获取，哪些是爬虫无法获取的
+2.他的id为root的div是写在index.html内，下面是对该html的一些分析
+（1）<link rel="icon" href="%PUBLIC_URL%/favicon.ico" />这一行中的href后面跟了%PUBLIC_URL%，**表示的是public文件夹路径**，该写法仅在react脚手架中奏效。
+（2）<meta name="viewport" content="width=device-width, initial-scale=1" />是在开启理想视口，一般用于移动端网页的开发（后期会详细讲解）
+（3）<meta name="theme-color" content="#000000" />主要是调整浏览器地址栏的颜色，仅用于调整原生安卓手机上浏览器的地址栏颜色。**很鸡肋不用太管**。
+
+![QQ20220223212544.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223212544.jpg)
+![QQ20220223212536.jpg](https://img.pterclub.com/images/2022/02/23/QQ20220223212536.jpg)
+
+（4）meta name="description"主要用于描述网页，主要用于提供给爬虫
+（5）    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />ios系统中网页添加到桌面后的图标
+（6）<link rel="manifest" href="%PUBLIC_URL%/manifest.json" />用于加壳的，给网页加个壳，然后当做app发布（ios和安卓都有），其实质上就是一个网页。而manifest主要用于配置一些加壳后的app的一些特征，比如开启app后的要显示的图片
+（7）<noscript>标签里的内容在浏览器不支持js时会显示出来
 
