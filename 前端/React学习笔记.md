@@ -1283,3 +1283,412 @@ getSnapshotBeforeUpdate用的也很少，所以就不多介绍了。
 （6）<link rel="manifest" href="%PUBLIC_URL%/manifest.json" />用于加壳的，给网页加个壳，然后当做app发布（ios和安卓都有），其实质上就是一个网页。而manifest主要用于配置一些加壳后的app的一些特征，比如开启app后的要显示的图片
 （7）<noscript>标签里的内容在浏览器不支持js时会显示出来
 
+### 功能界面的组件化编码流程
+
+1.拆分组件：拆分界面（拆组件的原则：按功能点拆分并且适于取名），抽取组件
+
+2.实现静态组件：使用组件实现静态页面效果
+
+3.实现动态组件
+
+（1）动态显示初始化数据
+
+​			①先思考数据是什么类型
+
+​			②数据名称
+
+​			③保存在哪个组件？比如有一个状态数据A组件用，B组件也用，C组件也用，那么就适合放在A,B,C共同的父亲组件里（还没学高级组件通信时），即状态提升
+
+（2）交互（从绑定事件监听开始）
+
+#### 天气案例
+
+首先把官方案例不需要的文件都删了，只留下的文件结构如图所示：
+
+![QQ20220224110337.jpg](https://img.pterclub.com/images/2022/02/24/QQ20220224110337.jpg)
+
+App.jsx，根组件名称
+
+```react
+import React, {Component} from 'react';
+import Weather from "./components/Weather";
+export default class App extends Component {
+    render() {
+        return (
+            <div>
+                <Weather/>
+            </div>
+        );
+    }
+}
+```
+
+Weather.jsx
+
+```react
+import React, {Component} from 'react';
+export default class Weather extends Component {
+    state={
+        isHot:true
+    }
+    changeWeather = ()=>{
+        const {isHot} = this.state
+        this.setState({isHot:!isHot})
+    }
+    render() {
+        return (
+            <div>
+                <h1>今天天气很{this.state.isHot ? '炎热':'凉爽'}</h1>
+                <button onClick={this.changeWeather}>切换天气</button>
+            </div>
+        );
+    }
+}
+```
+
+index.js，该文件主要作为入口文件使用
+
+```react
+import React from 'react';
+import ReactDOM from 'react-dom';
+import App from './App';
+
+ReactDOM.render(<App />, document.getElementById('root'));
+```
+
+index.html
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#000000" />
+    <meta
+      name="description"
+      content="Web site created using create-react-app"
+    />
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
+    <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
+    <title>React App</title>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>
+```
+
+#### todolist案例
+
+##### 代码部分
+
+1.app.jsx
+
+```react
+import React, { Component } from 'react'
+import Add from './components/Add'
+import List from './components/List'
+import Footer from './components/Footer'
+import './App.css'
+
+export default class App extends Component {
+  //初始化状态，因为Add要用todos(添加)，List也要读取数据
+  state = {
+    tasklist: [
+      { id: '001', name: '抽烟', done: true },
+      { id: '002', name: '喝酒', done: false },
+      { id: '003', name: '烫头', done: false },
+    ]
+  }
+  add = (newtask)=>{
+    const {tasklist} = this.state
+    this.setState({tasklist:[newtask, ...tasklist]})
+  }
+  delete = (id)=>{
+    const {tasklist} = this.state
+    const newList = tasklist.filter((todoObj)=>{
+      return todoObj.id !== id
+    })
+    this.setState({tasklist:newList})
+  }  
+  update = (id,done)=>{
+    const {tasklist} = this.state
+    const newList = tasklist.map((todoObj)=>{
+      if(todoObj.id === id) todoObj.done = done
+      return todoObj
+    })
+    this.setState({tasklist:newList})
+  }
+  checkAbove = (done)=>{
+    const {tasklist} = this.state
+    const newList = tasklist.map((todoObj)=>({...todoObj,done}))
+    this.setState({tasklist:newList})
+  }
+  clearDone = ()=>{
+    const {tasklist} = this.state
+    const newList = tasklist.filter((todoObj)=>{
+      return !todoObj.done
+    })
+    this.setState({tasklist:newList})
+  }
+  render() {
+    return (
+      <div className="todo-container">
+        <div className="todo-wrap">
+          <Add add={this.add}/>
+          <List 
+            todos={this.state.tasklist} 
+            deleteItem={this.delete}
+            updateItem={this.update}
+          />
+          <Footer
+            todos={this.state.tasklist}
+            checkAbove={this.checkAbove}   
+            clearDone={this.clearDone}        
+          />
+        </div>
+      </div>
+    )
+  }
+}
+```
+
+2.Add组件
+
+```react
+import React, { Component } from 'react'
+import { v4 as uuidv4 } from 'uuid';
+import './index.css'
+export default class Add extends Component {
+  handleKeyUp = (event)=>{
+    if(event.keyCode === 13){
+      if(event.target.value.trim() === ''){
+        alert('输入内容不能为空')
+      } else {
+        const todoObj = {
+          id: uuidv4(),
+          name: event.target.value,
+          done: false,
+        }
+        this.props.add(todoObj)
+        event.target.value = ''
+        
+      }
+    }
+  }
+  render() {
+    return (
+      <div className="todo-header">
+        <input type="text" onKeyUp={this.handleKeyUp} placeholder="请输入你的任务名称，按回车键确认" />
+      </div>
+    )
+  }
+}
+```
+
+3.Footer组件
+
+```react
+import React, { Component } from 'react'
+import './index.css'
+export default class Footer extends Component {
+  checkAll = (event)=>{
+    this.props.checkAbove(event.target.checked)
+  }
+  clearAllDone = ()=>{
+    if(window.confirm('确定删除全部已完成的任务吗？')){
+      if(this.props.todos.length > 0){
+        this.props.clearDone()
+      } else {
+        alert('抱歉，没有可删除的任务')
+      }
+    }
+  }
+  render() {
+    const {todos} = this.props
+    const doneCount = 
+      todos.reduce((preValue,current)=>{
+        return preValue + (current['done'] === true ? 1 : 0)
+      },0)
+    const all = todos.length
+    return (
+      <div className="todo-footer">
+        <label>
+          <input
+           type="checkbox"
+           checked={all === doneCount && all > 0}
+           onChange={this.checkAll}/>
+        </label>
+        <span>
+          <span>已完成{doneCount}</span> / 全部{all}
+        </span>
+        <button className="btn btn-danger" onClick={this.clearAllDone}>清除已完成任务</button>
+      </div>
+    )
+  }
+}
+```
+
+4.Item组件
+
+```react
+import React, { Component } from 'react'
+import './index.css'
+export default class Item extends Component {
+  state = {mouseIsEnter:false}
+  handleMouse = (mouseIsEnter)=>{
+    return ()=>{
+      this.setState({mouseIsEnter})
+    }
+  }  
+  handleDelete = (id)=>{
+    return () => {
+      if(window.confirm('确定删除吗？')){
+        this.props.deleteItem(id)
+      }
+    }
+  }
+  handleCheck = (id)=>{
+    return (event) =>{
+      this.props.updateItem(id,event.target.checked)
+    }
+  }
+  render() {
+    const {id, name, done} = this.props
+    const {mouseIsEnter} = this.state
+    return (
+      <li 
+        onMouseEnter={this.handleMouse(true)} 
+        onMouseLeave={this.handleMouse(false)}
+        className={mouseIsEnter? 'active' : ''}
+      >
+        <label>
+          <input
+           type="checkbox"
+           checked={done} 
+           onChange={this.handleCheck(id)} />
+          <span>{name}</span>
+        </label>
+        <button 
+          className="btn btn-danger" 
+          style={{ display: mouseIsEnter ? "block" : "none" }}
+          onClick={this.handleDelete(id)}
+        >删除</button>
+      </li>
+    )
+  }
+}
+```
+
+5.List组件
+
+```react
+import React, { Component } from 'react'
+import Item from '../Item'
+import "./index.css" 
+export default class List extends Component {
+  render() {
+    const {todos,deleteItem,updateItem} = this.props
+    return (
+      <ul className="todo-main">
+        {
+          todos.map((todoObj,index)=>{
+            return <Item 
+              key={todoObj.id} 
+              index={index}
+              {...todoObj}
+              deleteItem={deleteItem}
+              updateItem={updateItem}
+            />
+          })
+        }
+      </ul>
+    )
+  }
+}
+```
+
+##### 注意事项
+
+1.组件拆分后可以按照文件夹划分，在文件夹中可以默认创建index.js和index.css等，当引入时不指定文件夹里的哪个js，那么react就会**默认引用**index.js。
+
+2.【父组件】给【子组件】传递数据使用props传递
+
+【子组件】给【父组件】传递数据：通过props传递，要求父组件提前给子组件传递一个函数
+
+【兄弟组件】之间通信可以借助共同的父亲
+
+3.JSX标签里的一些onClick或者onChange属性值后面跟的函数一旦要传数据进去，那么这个函数就得写成**高阶函数**+**箭头函数**的形式，即函数的返回值又是一个函数。
+
+![QQ20220224214140.jpg](https://img.pterclub.com/images/2022/02/24/QQ20220224214140.jpg)
+
+4.reduce函数复习：
+arr.reduce((preValue, current, index, arr)=>{},initialValue)
+		arr: 当前操作的数组。
+		preValue:第一次执行回调时为给定的初始值initialValue,以后是上一次执行回调的返回值。
+		备注：若没有传入initialValue，则第一次的preValue值是数组中第一个元素的值。
+		current: 表示当前正在处理的元素。
+		index：表示当前正在处理的数组元素的索引，若传入了initialValue值，则为0，否则为1。
+		array: 当前操作的数组（就是arr）。
+		initialValue： 表示初始值，一般做数学运算时设置为0，若筛选最值可以不传。
+
+```javascript
+<script type="text/javascript">
+    let person = [
+      { id: "001", name: "Tom", age: "16" },
+      { id: "002", name: "John", age: "17" },
+      { id: "003", name: "Rechael", age: "18" },
+      { id: "004", name: "Hank", age: "19" },
+    ]
+    let arr = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    //reduce 可以进行累加/累乘
+    const result =
+      arr.reduce((preValue, current, index, arr) => {
+        console.log(
+          'preValue:', preValue,
+          '| current：', current,
+          '| index:', index,
+          '| arr:', arr
+        );
+        return preValue + current
+      })
+    console.log(result); // 55
+
+    //reduce 可以进行条件求和
+    const result2 =
+      arr.reduce((preValue, current) => {
+        return preValue + ( current % 2 == 0 ? current : 0)
+      },0)
+    console.log('数列偶数之和为',result2);
+    
+    //reduce 可以进行条件统计
+    const result3 =
+      arr.reduce((preValue, current) => {
+        return preValue + ( current % 2 !== 0 ? 1 : 0)
+      },0)
+    console.log('数列奇数个数为',result3,'个');
+
+    //reduce 可以筛选最值
+    const result4 =
+      arr.reduce((preValue, current) => {
+        return Math.max(preValue,current)
+      })
+    console.log('数列最大值为',result4);
+  </script>
+```
+
+5.在JSX中，箭头函数只有一个语句，即返回语句且返回的是一个对象时，简写时**不能用花括号**，使用花括号会被当成**函数体**，应该在花括号外面加一层**小括号**即可！
+
+```javascript
+todos.map((todoObj)=>({...todoObj,done}))
+```
+
+6.defaultchecked只能执行一次（<u>适合用于勾选框不会改变的情形</u>）。
+
+**写了checked就必须要写onchange**！因为数据状态驱动着页面。总结下来就是onchange**不能配合**defaultChecked使用。
+
+7.爷爷组件想给孙子组件传函数的话，现在必须得通过父亲组件来传，但是以后有新的解决办法！
