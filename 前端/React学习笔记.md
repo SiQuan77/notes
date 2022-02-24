@@ -1627,13 +1627,20 @@ export default class List extends Component {
 
 4.reduce函数复习：
 arr.reduce((preValue, current, index, arr)=>{},initialValue)
-		arr: 当前操作的数组。
-		preValue:第一次执行回调时为给定的初始值initialValue,以后是上一次执行回调的返回值。
-		备注：若没有传入initialValue，则第一次的preValue值是数组中第一个元素的值。
-		current: 表示当前正在处理的元素。
-		index：表示当前正在处理的数组元素的索引，若传入了initialValue值，则为0，否则为1。
-		array: 当前操作的数组（就是arr）。
-		initialValue： 表示初始值，一般做数学运算时设置为0，若筛选最值可以不传。
+	
+	arr: 当前操作的数组。
+	
+	preValue:第一次执行回调时为给定的初始值initialValue,以后是上一次执行回调的返回值。
+	
+	备注：若没有传入initialValue，则第一次的preValue值是数组中第一个元素的值。
+	
+	current: 表示当前正在处理的元素。
+	
+	index：表示当前正在处理的数组元素的索引，若传入了initialValue值，则为0，否则为1。
+	
+	array: 当前操作的数组（就是arr）。
+	
+	initialValue： 表示初始值，一般做数学运算时设置为0，若筛选最值可以不传。
 
 ```javascript
 <script type="text/javascript">
