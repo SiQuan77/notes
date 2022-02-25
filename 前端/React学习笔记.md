@@ -1627,20 +1627,13 @@ export default class List extends Component {
 
 4.reduce函数复习：
 arr.reduce((preValue, current, index, arr)=>{},initialValue)
-	
-	arr: 当前操作的数组。
-	
-	preValue:第一次执行回调时为给定的初始值initialValue,以后是上一次执行回调的返回值。
-	
-	备注：若没有传入initialValue，则第一次的preValue值是数组中第一个元素的值。
-	
-	current: 表示当前正在处理的元素。
-	
-	index：表示当前正在处理的数组元素的索引，若传入了initialValue值，则为0，否则为1。
-	
-	array: 当前操作的数组（就是arr）。
-	
-	initialValue： 表示初始值，一般做数学运算时设置为0，若筛选最值可以不传。
+		arr: 当前操作的数组。
+		preValue:第一次执行回调时为给定的初始值initialValue,以后是上一次执行回调的返回值。
+		备注：若没有传入initialValue，则第一次的preValue值是数组中第一个元素的值。
+		current: 表示当前正在处理的元素。
+		index：表示当前正在处理的数组元素的索引，若传入了initialValue值，则为0，否则为1。
+		array: 当前操作的数组（就是arr）。
+		initialValue： 表示初始值，一般做数学运算时设置为0，若筛选最值可以不传。
 
 ```javascript
 <script type="text/javascript">
@@ -1699,3 +1692,98 @@ todos.map((todoObj)=>({...todoObj,done}))
 **写了checked就必须要写onchange**！因为数据状态驱动着页面。总结下来就是onchange**不能配合**defaultChecked使用。
 
 7.爷爷组件想给孙子组件传函数的话，现在必须得通过父亲组件来传，但是以后有新的解决办法！
+
+## 跨域问题
+
+### 定义及发生时机
+
+1.定义和发生实际：
+
+只要http（对应不同的是https），ip地址，端口号不同，就会产生跨域，但仅限于在**浏览器端**借助Ajax（也就是xhr）发送请求给**服务器**。
+
+注意跨域问题只会导致浏览器无法获得数据但是**发送请求是可以正常发送**的，服务器也能接受到这个请求。
+
+2.特殊情况：
+
+（1）服务器与服务器之间不同源且互相请求时不会产生跨域问题
+
+（2）使用form表单请求时不会产生跨域问题，因为form表单不是通过xhr实现的。
+
+### 如何解决问题
+
+在react脚手架中有以下几种方式
+
+1.jsonp
+2.cor
+3.借助代理：原理是借助代理，代理与目标服务器之间是**服务器与服务器之间**的对话，所以不会有跨域问题，若是浏览器与服务器之间的交互，则会有跨域问题。
+
+#### 第一种方式，直接在package.json中追加一行配置
+
+在package.json中追加如下配置（端口号是目标服务器的端口号）：
+
+```json
+"proxy":"http://localhost:5000"
+```
+
+ 请求的地址改为本地地址+目标后缀
+
+```javascript
+url:'http://localhost:3000/students',
+method:'GET'
+```
+
+ 说明：
+
+1. 优点：配置简单，前端请求资源时可以不加任何前缀
+  2. 缺点：**不能配置多个代理**。
+  3. 工作方式：上述方式配置代理，当用Ajax请求了3000不存在的资源时，该请求会转发给5000（如果3000存在资源，则优先匹配前端资源，localhost:3000 即是public路径）
+
+#### 第二种方式，编写setupProxy.js配置具体代理规则
+
+1.需要安装http-proxy-middleware插件，使用npm安装即可
+
+2.编写setupProxy.js配置具体代理规则：
+
+```js
+const {createProxyMiddleware} = require('http-proxy-middleware')
+
+module.exports = function(app) {
+  app.use(
+    createProxyMiddleware( 
+      '/api1', // 只要/api 开头的请求，才转发给后端服务器
+      {
+        target:'http://localhost:5000',
+        changeOrigin:true, // 控制服务器接收到的请求头中host字段的值
+          // false(默认值)：服务器请求来自于原地址 localhost:3000
+          // true：服务器请求来自于5000（请求目标地址），可迷惑目标服务器
+        pathRewrite:{'^/api1':''} // 重写路径（目的：去掉api前缀）
+      }),
+    createProxyMiddleware( 
+      '/api2',
+      {
+        target:'http://localhost:5001',
+        changeOrigin:true, 
+        pathRewrite:{'^/api2':''} 
+      })
+  )
+}
+```
+
+**额外说明**：
+
+​	pathRewrite可以**覆盖替换**用于标识该地址是用于转发的部分。
+
+​		举个例子：假如有个一个腾讯的api，这个腾讯api的位置是（不关注地址）/OCR_text，现在我本地想请求这个api，我需要给它做个标识，我请求的可能就是	http://localhost:3000/tx/OCR_text，这个时候脚手架知道/tx开头的都需要转发给腾讯的api地址，但是如果不加pathRewrite的话，直接转发到腾讯服务器的就	是/tx/OCR_text，但是正确的地址应该是/OCR_text，那这个时候就出现问题了；使用pathRewrite就可以把前面的/tx去掉，然后正常访问腾讯的api地址。
+
+
+
+(提示：目前的场景是3000通过代理去跨域请求5000里的数据）
+
+changeOrigin:true加了之后，服务器收到的请求头中的host是localhost:5000，设置为     	false时，请求头收到的就是**原来的地址**localhost:3000。
+	changeOrigin默认值为false但我们**一般把它设置为true**，可以撒谎欺骗5000即请求服务器。
+
+#### 注意事项
+
+1.在脚手架中，会自动处理浏览器访问不存在资源时的情况：如果要访问的资源不存在（通过浏览器中输入资源地址访问时），脚手架会自动重定向去index.html。如果是ajax请求不存在的地址，那么会正常地显示404错误，
+
+2..在react脚手架里，public文件夹就是http://localhost:3000的根目录，访问http://localhost:3000/a.jpg就等于在访问public下的a.jpg。所以会出现问题，如果前端地址里有这个资源并且后端地址也有这个资源，那么代理不生效，ajax会自动取到本地也就是前端地址的资源。
