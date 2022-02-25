@@ -1301,7 +1301,7 @@ getSnapshotBeforeUpdate用的也很少，所以就不多介绍了。
 
 （2）交互（从绑定事件监听开始）
 
-#### 天气案例
+### 天气案例
 
 首先把官方案例不需要的文件都删了，只留下的文件结构如图所示：
 
@@ -1381,9 +1381,9 @@ index.html
 </html>
 ```
 
-#### todolist案例
+### todolist案例
 
-##### 代码部分
+#### 代码部分
 
 1.app.jsx
 
@@ -1611,7 +1611,7 @@ export default class List extends Component {
 }
 ```
 
-##### 注意事项
+#### 注意事项
 
 1.组件拆分后可以按照文件夹划分，在文件夹中可以默认创建index.js和index.css等，当引入时不指定文件夹里的哪个js，那么react就会**默认引用**index.js。
 
@@ -1787,3 +1787,159 @@ changeOrigin:true加了之后，服务器收到的请求头中的host是localhos
 1.在脚手架中，会自动处理浏览器访问不存在资源时的情况：如果要访问的资源不存在（通过浏览器中输入资源地址访问时），脚手架会自动重定向去index.html。如果是ajax请求不存在的地址，那么会正常地显示404错误，
 
 2..在react脚手架里，public文件夹就是http://localhost:3000的根目录，访问http://localhost:3000/a.jpg就等于在访问public下的a.jpg。所以会出现问题，如果前端地址里有这个资源并且后端地址也有这个资源，那么代理不生效，ajax会自动取到本地也就是前端地址的资源。
+
+## 消息订阅机制
+
+通过消息订阅机制可以解决兄弟组件之间通信需要通过父亲组件的问题 。消息订阅机制可以适用于**任意两个组件**之间的通信。
+
+### 安装以及使用
+
+我们这里使用pubsub消息订阅插件
+
+1.首先安装这个插件
+
+```shell
+npm install pubsub-js
+```
+
+2.先订阅再发布。需要接收信息的组件是订阅方，需要传送数据出去的组件是发布方。
+
+```js
+PubSub.publish('status',data)
+this.msgis = PubSub.subscribe('status',函数(_,data))
+PubSub.unsubscribe(this.msgid) // 取消订阅
+```
+
+### github搜索用户名案例
+
+项目结构如下
+
+![QQ20220225182703.jpg](https://img.pterclub.com/images/2022/02/25/QQ20220225182703.jpg)
+
+1.App.jsx
+
+```js
+import React, { Component } from 'react'
+import Search from './components/Search'
+import List from './components/List'
+export default class App extends Component {
+  render() {
+    return (
+      <div className="container">
+        <Search/>
+        <List/>
+      </div>
+    )
+  }
+}
+```
+
+2.Search组件
+
+```react
+import React, {Component} from 'react';
+import axios from 'axios'
+import PubSub from 'pubsub-js'
+export default class Search extends Component {
+    keyWordContainer = React.createRef()
+    //通过createRef来使用Ref
+    search = ()=> {
+        // 1. 获取用户输入
+        const {value} = this.keyWordContainer.current
+        // 2. 校验数据
+        if(!value.trim()) return alert('please input a word')
+        // this.props.updateAppState({isFirst:false, isLoading:true})
+        PubSub.publish("user_date_of_github",{isFirst:false, isLoading:true})
+
+        // 3. 发送请求获取数据
+        axios.get(`https://api.github.com/search/users?q=${value}`).then(
+            response => {
+                const {items} = response.data
+                // 请求成功后，通知app存储用户数据, 更改isLoading
+                // this.props.updateAppState({users:items, isLoading:false})
+                PubSub.publish("user_date_of_github",{users:items, isLoading:false})
+            },
+            error => {
+                console.log(error);
+                // 请求失败后，存储错误信息、将isLoading变为false
+                // 注意：此处的error是一个对象，真正的错误信息在error.message
+                // this.props.updateAppState({errorMsg:error.message, isLoading:false})
+                PubSub.publish("user_date_of_github",{errorMsg:error.message, isLoading:false})
+            }
+        )
+    }
+    render() {
+        return (
+            <section className="jumbotron">
+                <h3 className="jumbotron-heading">Search Github Users</h3>
+                <div>
+                    <input type="text" ref={this.keyWordContainer} placeholder="enter the name you search"/>&nbsp;
+                    <button onClick={this.search}>Search</button>
+                </div>
+            </section>
+        )
+    }
+}
+```
+
+3.List组件
+
+```react
+import React, {Component} from 'react';
+import PubSub from 'pubsub-js'
+export default class List extends Component {
+    state = {
+        users:[],
+        isFirst:true,
+        isLoading:false,
+        errorMsg:''
+    }
+    componentDidMount() {
+        //这个组件一挂载完毕就开始订阅
+        this.pub_id = PubSub.subscribe('user_date_of_github',(_,data)=>{
+            this.setState(data)
+        })
+    //    data前面必须有一个顶位的标识，因为消息发布传过来给回调函数的参数是(msg,data)，
+    //    所以第二个参数才是data
+    }
+
+    componentWillUnmount() {
+        PubSub.unsubscribe(this.pub_id)
+    }
+    render() {
+        const {isFirst,isLoading,errorMsg,users} = this.state
+        return (
+            <div className="row">
+                {
+                    isFirst ? <h1>Welcome!</h1> :
+                        isLoading ? <h1>正在加载</h1> :
+                            errorMsg ? <h1>{errorMsg}</h1> :
+                                users.map((userObjs)=>{
+                                    // 函数体
+                                    return (
+                                        <div className="card" key={userObjs.id} style={{width:"100px"}}>
+                                            <a href={userObjs.html_url} target="_blank" rel="noreferrer">
+                                                <img alt='avatar' src={userObjs.avatar_url} style={{width:'100px'}} />
+                                            </a>
+                                            <p className="card-text">{userObjs.login}</p>
+                                        </div>
+                                    )
+                                })
+                }
+            </div>
+        )
+    }
+}
+```
+
+#### 注意事项
+
+1.react脚手架会预先检查通过ES6引入的CSS里的所有资源**哪怕没用到**，只要没找到其中某一个资源，它就会**报错**。如果是引入第三方的css库，建议放到public中，在index.html中通过link的形式引入css库。 
+
+2.三元表达式可以嵌套使用。
+
+3.对象是**不可以直接**在react中显示的，会报错：
+
+![QQ20220225153808.jpg](https://img.pterclub.com/images/2022/02/25/QQ20220225153808.jpg)
+
+![QQ20220225153824.jpg](https://img.pterclub.com/images/2022/02/25/QQ20220225153824.jpg)
