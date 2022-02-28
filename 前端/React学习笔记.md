@@ -2444,3 +2444,69 @@ serve build
 ![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228113909.png)2.npm全局安装的模块组件都在C:\Users\Administrator.DESKTOP-VDATQMB\AppData\Roaming\npm这个目录下，需要打开查看隐藏目录，因为AppData是隐藏的。
 
 ![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228113945.png)
+
+# 拓展部分
+
+## lazy_load懒加载
+
+### 定义
+
+​	顾名思义，懒加载的意思就是我需要或者说我请求的时候再加载，如果我还没有请求那就不要加载。最典型的应用就是用在路由组件上，如果我们没有点击路由，就先不加载路由对应的组件，当我们点击路由了再进行加载。
+
+​	如何判断是否是懒加载呢？以我们做的路由案例为例。如果点击路由之后**network请求了相应的组件就是懒加载**，说明是点击的时候再请求，如果**network没有任何请求信息**，则说明之前就已经加载完毕了，
+
+
+
+未实现懒加载：
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228144901.png)
+
+实现了懒加载：
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228152055.png)
+
+### 实现方法
+
+​	我们需要lazy函数和suspense组件
+
+1.引入lazy函数和suspense组件
+
+（1）使用路由表
+
+①在路由表的js文件里引入lazy和Suspense，在路由表里将组件的引入用lazy函数包装起来。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228151616.png)
+
+②在路由表的地方用Suspense包裹起来即可
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228152134.png)
+
+
+
+其中Loading组件是我写的用来实现Loading加载的小组件，引用了antd里的<Spin>组件。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228152149.png)
+
+当我把网速调成3G时，就会调用Suspense里的Loading组件：
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228152308.png)
+
+嵌套路由同理，在路由表里用lazy，在outlet组件外部包裹Suspense
+
+
+
+（2）不使用路由表
+
+①引入lazy和Suspense，将引入方式用lazy函数包装起来。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228150658.png)
+
+②用Suspense包裹起来并且指定一个回调组件，当加载过慢时就会调用这个组件。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228151414.png)
+
+2.如果不写suspense则会报如下错误
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228150415.png)
+
+​	这是因为如果懒加载了，并且网速很慢的情况下，在网络请求组件返回之前需要给react一个组件或者标签先显示着，可以理解为loading
