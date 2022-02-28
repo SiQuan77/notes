@@ -2510,3 +2510,151 @@ serve build
 ![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228150415.png)
 
 ​	这是因为如果懒加载了，并且网速很慢的情况下，在网络请求组件返回之前需要给react一个组件或者标签先显示着，可以理解为loading
+
+## hooks
+
+### 函数式组件的缺陷
+
+1.函数式组件无法使用组件实例三大属性中的**ref**和**state**，props因为可以给函数传参数所以可以正常使用。
+
+2.无法使用生命周期钩子
+
+### 修补措施
+
+React16.8版本之后更新了hooks，修补了函数式组件的缺陷。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/QQ截图20220228185911.jpg)
+
+#### useState()
+
+1.useState()，非常简单
+
+点按钮数字+1的案例：
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228203157.png)
+
+#### useEffect()
+
+2.useEffect可以让函数式组件拥有声明周期钩子
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/QQ截图20220228200949.jpg)
+
+```react
+import React,{useState,useEffect} from 'react';
+
+export default function App(props) {
+    const [number,setNumber] = useState(0);
+    //number是state里的一个属性，设为初值0，setNumber是用于改变number的函数
+    useEffect(()=>{console.log("我正在检测所有的状态，只要状态改变我就会显示")})
+    function addone(){
+        // setNumber(number+1);   这是第一种写法
+        setNumber(()=>{
+            return number+1;
+        })//这是第二种写法
+    }
+    return (
+        <div>
+            <h1>{number}</h1>
+            <button onClick={addone}>点我加一</button>
+        </div>
+    );
+}
+```
+
+（1）如果不带第二个数组参数，则默认检测所有的状态。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228204505.png)
+
+（2）带上第二个数组，但是数组内部没有任何东西，就相当于compoentDidMount()函数，组件第一次挂载时默认调用。
+
+```react
+import React,{useState,useEffect} from 'react';
+
+export default function App(props) {
+    const [number,setNumber] = useState(0);
+    //number是state里的一个属性，设为初值0，setNumber是用于改变number的函数
+    useEffect(()=>{
+        console.log("App组件挂载上了，我默认被调用！")
+    },[])
+    function addone(){
+        // setNumber(number+1);   这是第一种写法
+        setNumber(()=>{
+            return number+1;
+        })//这是第二种写法
+    }
+    return (
+        <div>
+            <h1>{number}</h1>
+            <button onClick={addone}>点我加一</button>
+        </div>
+    );
+}
+```
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228204753.png)
+
+(3)如果数组里有组件名称，则表示监听这个组件，组件一旦变化就会调用这个函数，类似于componentDidUpdate()。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228212046.png)
+
+（4）useEffect参数的函数体返回的函数就是组件被卸载时调用的函数
+
+```react
+import React,{useState,useEffect} from 'react';
+import ReactDOM from "react-dom";
+export default function App(props) {
+    const [number,setNumber] = useState(0);
+    //number是state里的一个属性，设为初值0，setNumber是用于改变number的函数
+    useEffect(()=>{
+        console.log("我正在监听number，它更新了");
+        return ()=>{
+            console.log("我是useEffect函数参数内部的返回" +
+                "函数的内容，组件被卸载了，所以我调用了")
+        }
+    },[number])
+    function addone(){
+        // setNumber(number+1);   这是第一种写法
+        setNumber(()=>{
+            return number+1;
+        })//这是第二种写法
+    }
+    function unmount(){
+        ReactDOM.unmountComponentAtNode(document.getElementById("root"))
+    }
+    return (
+        <div>
+            <h1 style={{marginLeft:'1000px'}}>{number}</h1>
+            <button style={{marginLeft:'1000px'}} onClick={addone}>点我加一</button>
+            <button onClick={unmount}>卸载组件</button>
+        </div>
+    );
+}
+```
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228212519.png)
+
+#### useRef()
+
+作用类似于类式组件的ref，比如我想用ref拿到input里面的取值
+
+```react
+import React,{useState,useEffect,useRef} from 'react';
+export default function App(props) {
+    const Myref=useRef()
+    function show(){
+        alert(Myref.current.value);
+    }
+    return (
+        <div>
+            <input type={"text"} value={"哈哈哈哈"} ref={Myref}/>
+            <button style={{marginLeft:'1000px'}} onClick={show}>点我显示input的内容</button>
+        </div>
+    );
+}
+```
+
+## Fragment
+
+​	组件里的语法要求必须被<div>包裹，这对包裹的div也会被渲染到最终页面上，如果我们不想要div包裹，则可以使用<Fragment>对包裹，不过需要从React库中引入Fragment组件。
+
+​	也可以直接使用空标签包裹，即<> xxxx</>
