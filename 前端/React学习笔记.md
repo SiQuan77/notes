@@ -1943,3 +1943,504 @@ export default class List extends Component {
 ![QQ20220225153808.jpg](https://img.pterclub.com/images/2022/02/25/QQ20220225153808.jpg)
 
 ![QQ20220225153824.jpg](https://img.pterclub.com/images/2022/02/25/QQ20220225153824.jpg)
+
+## React路由
+
+这里主要介绍的是六代路由了，npm install react-route-dom默认安装的是六代路由。
+
+官方在这里更推崇函数式组件！函数式组件里this的残疾现象被hooks改进了，这个部分会在后面详细介绍。
+
+### 概念理解
+
+#### SPA
+
+SPA指的是Single Page Web Application SPA，整个应用只有**一个完整的页面**，点击页面中的链接**不会刷新**页面，只会做页面的**局部更新**，数据都需要通过ajax请求获取，并在前端**异步**展现。
+
+#### 路由
+
+1.何为路由？
+
+​	一个路由就是一个映射关系（key:value），key为路径，value可能是element（element里可以有component或者Navigate）
+
+2.路由分类：
+
+（1）后端路由：
+
+​	value 是 function, 用来处理客户端提交的请求。
+
+​	工作过程：当node接收到一个请求时，根据请求路径找到匹配的路由，调用路由中的函数来处理请求，返回响应数据。
+
+（2）前端路由
+
+浏览器端路由，value是component，用于展示页面内容。可以使用Route路由组件实现或者使用路由表实现。
+
+### 路由使用的原则
+
+1.明确好界面中的导航区、展示区。
+
+2.按照实际需求将a标签改为Link或者NaviLink路由组件（即 **编写路由链接**）
+
+3.展示区写Route标签或者在路由表里写好对应的路径之后通过Outlet插槽组件来显示（即 **注册路由**）。
+
+4.<App/>组件外部应当包裹一个`<BrowserRouter>`或`<HashRouter>`
+
+### NavLink和Link
+
+1.NavLink和Link都可以实现编写路由链接的过程，区别是NavLink可以更加自由地控制点击后该标签的class的内容，比如点击后class中多一个active属性或者其他的属性值。
+
+```js
+<NavLink className={({isActive}) => {
+    return isActive ? "list-group-item atcsq" : "list-group-item"
+}} to="/home">Home</NavLink>
+```
+
+注意这里接受的是一个对象，点击NavLink后，NavLink会给回调函数传一个对象{isActive:true}，所以接收参数的时候要注意！
+
+2.Link组件写法类似
+
+```js
+<Link children={m.title} to={"details"}/>
+```
+
+### Navigate
+
+该组件主要是用于重定向，Navigate只要被渲染就会修改路径从而导致视图的切换。
+
+```js
+<Navigate to={"/About"}/>
+```
+
+### Route和Routes
+
+1.Route和Routes必须搭配使用，且必须使用Routes包裹Route，这样在匹配路由的时候，一旦匹配到响应的路由，react就不会继续往下匹配了，提高了效率
+
+2.Route是用于注册路由，写了Route的地方，在路由链接被点击的时候，Route组件就会被替换成Route里element里面的组件。
+
+```react
+<Routes>
+    <Route path="/about" element={<About/>}/>>
+	<Route path="/home" element={<Home/>}/>>
+	<Route path={"/"} element={<Navigate to={"about"} />}/>
+    {/*用于重定向的Navigate，Navigate还可以写replace属性，写上了之后就是replace模式*/}
+</Routes>
+```
+
+### 路由表和嵌套路由
+
+#### 路由表
+
+使用路由表对路由进行统一管理会比较方便。
+
+假如我们想把上述路由转换成路由表的形式的话：
+
+我们需要使用到**useRoutes**这个模块，然后我们可以把路由写在另一个路由文件中以默认方式暴露
+
+我们在src目录下创建routes文件夹，再在routes文件夹中创建index.js
+
+```js
+import About from "../pages/About";
+import Home from "../pages/Home";
+import News from "../pages/News";
+import Details from "../pages/Details";
+import Message from "../pages/Message";
+import {Navigate} from "react-router-dom";
+import React from "react";
+export default [
+    {
+        path:'/about',
+        element:<About/>
+    },
+    {
+        path:'/home',
+        element:<Home/>,
+        children:[
+            {
+                path:'news',
+                element:<News/>
+            },
+            {
+                path:'message',
+                element: <Message/>,
+                children:[
+                    {
+                        path:'details',
+                        element:<Details/>
+                    }
+                ]
+
+            }
+        ],
+    },
+    //    用于重定向的route
+    {
+        path:'/',
+        element:<Navigate to={"/About"}/>
+    },
+    {
+        //这里用于home组件内部的重定向，默认转到home组件后转到news
+        path:'/home/',
+        element: <Navigate to={"/home/news"}/>
+    }
+]
+```
+
+回到需要使用路由表的App.js，引入useRoutes后，往useRoutes传入路由数组（即 src/routes/index.js中默认暴露的内容），接收为变量后，写在原先Routes的位置。
+
+```react
+import React from 'react';
+import {NavLink,useRoutes} from "react-router-dom";
+import routes from "./routes"
+import Header from "./pages/Header";
+export default function App(props) {
+    //路由表，写在routes文件夹下了
+    const routes_table = useRoutes(routes)
+    return (
+        <div>
+            <div className="row">
+                <Header/>
+            </div>
+            <div className="row">
+                <div className="col-xs-2 col-xs-offset-2">
+                    <div className="list-group">
+                        {/*<NavLink className="list-group-item" to="/about">About</NavLink>*/}
+                        {/*<NavLink className="list-group-item " to="/home">Home</NavLink>*/}
+                        {/*NavLink在被点击的时候自动给自己加上active类名，如果想实现自定义的话，
+                        需要把className写成一个函数，函数接受的就是一个对象，即{isActive:true}*/}
+                        {/*这里atcsq就是我自己自定义的样式*/}
+                        <NavLink className={({isActive}) => {
+                            return isActive ? "list-group-item atcsq" : "list-group-item"
+                        }} to="/home">Home</NavLink>
+                        <NavLink className={({isActive}) => {
+                            return isActive ? "list-group-item atcsq" : "list-group-item"
+                        }} to="/about" children={"About"}/>
+                    </div>
+                </div>
+                <div className="col-xs-6">
+                    <div className="panel">
+                        <div className="panel">
+                                {routes_table}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+```
+
+#### 嵌套路由
+
+假如home路径下还有嵌套路由，可以在路由表里以children的形式呈现出来。
+
+不过要注意：嵌套路由需要使用<Outlet/>组件将需要呈现的位置标注出来，因为我们都在路由表里写好了路由，那么在页面的哪个位置安放组件是需要我们指出的。
+
+比如下面Message组件就是使用<Outlet/>指出Details组件要出现的位置。
+
+```react
+import React,{useState} from 'react';
+import {Link,Outlet,useNavigate} from "react-router-dom";
+export default function Message(props) {
+    //使用useNavegate可以实现编程式路由，即通过编程来触发路由的跳转，
+    // 而不一定非得通过用户点击来触发路由
+    const Navigate = useNavigate()
+    const [messages]=useState([
+        {id:"001",title:"消息一",content:"我爱你中国"},
+        {id:"002",title:"消息二",content:"亲爱的母亲"},
+        {id:"003",title:"消息三",content:"我为你自豪"}
+    ])
+
+
+    function showDetail(m){
+        //实现了编程式路由，同时还可以通过state方式来传递参数
+        Navigate('details',{
+            replace:false,
+            state:m
+        })
+    }
+    return (
+        <div>
+            <ul>
+                {
+                    messages.map((m)=>{
+                        return (
+                            <li key={m.id}>
+                                <Link children={m.title} to={"details"} state={m}/>
+                                <button onClick={()=>{showDetail({...m})}}>查看</button>
+                            {/*    state里等价于state={{id:m.id,title:m.title,content:m.content}}*/}
+                            </li>
+                        )
+                    })
+                }
+            </ul>
+            <Outlet/>
+        {/*    指出组件呈现的位置*/}
+        </div>
+    );
+}
+```
+
+#### 解决样式丢失问题
+
+在二级或者嵌套路由可能会出现样式丢失的问题，为了避免这个问题，
+
+我们需要把index.html中引入的css写成/xxx的格式，不要写成./xxx的格式。
+
+也可以使用%PUBLIC_URL%。
+
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>路由实现</title>
+  <link rel="icon" href="%PUBLIC_URL%/favicon.ico">
+  <link rel="stylesheet" href="/bootstrap.css">
+  <style>
+    .atcsq{
+      background-color: #c7254e !important;
+      color: #4cae4c !important;
+    /*  可以通过!important来将样式优先级提升到最高为了避免被bootstrap样式覆盖的情况*/
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+</body>
+</html>
+```
+
+#### 编程式路由
+
+之前我们进行路由跳转都是需要用户点击路由再进行跳转，如何用编程实现跳转呢？
+
+比如我想实现一个功能，在一个页面展示5秒后自动跳转到另一个页面。
+
+这时我们需要使用**useNavigate**组件。
+
+在函数体内部使用 const Navigate = useNavigate()接收变量之后:
+
+Navigate(1)命令式前进1个页面，Navigate(-1)就是退后一个页面。
+
+```js
+Navigate('路径',{
+	replace:false,
+    state:{xxxxx}
+})
+```
+
+上面的命令就是跳转到指定路径后并且携带上state属性值。
+
+#### 给路由传递参数
+
+这里只介绍使用state传递
+
+在六代里非常方便，只需在Link或者NaviLink组件中多写一个state属性即可：
+
+```react
+<Link children={m.title} to={"details"} state={{id:"002",title:"消息一",content:"我爱你中国"}}/>
+```
+
+下一级路由接收state参数时需要使用useLocation组件
+
+```react
+import React from 'react';
+import {useLocation} from "react-router-dom";
+export default function Details(props) {
+    //使用useLocation来读取路由通过state传递过来的信息
+    //这里使用解构赋值
+    const {id,title,content} = useLocation().state
+    return (
+        <div>
+            <ul>
+                <li>消息编号：{id}</li>
+                <li>消息名称：{title}</li>
+                <li>消息内容：{content}</li>
+            </ul>
+        </div>
+    );
+}
+```
+
+#### BrowserRouter与HashRouter的区别
+
+1. 底层原理不一样：
+
+- BrowserRouter使用的是H5的history API，不兼容IE9及以下版本。
+- HashRouter使用的是URL的哈希值
+
+2. path表现形式不一样
+
+- BrowserRouter的路径中没有#
+- HashRouter的路径包含#
+
+3. 刷新对路由state参数的影响
+
+- （1）BrowserRouter无影响，因为state保存在history对象中
+- （2）HashRouter刷新后会导致路由state参数的丢失！！！
+
+4. 备注：HashRouter可以用于解决一些路径错误相关的问题。
+
+# ReactUI组件库
+
+​	这里主要介绍antd，除了antd外还有ElementUI for react和vant（专门用于移动端开发）。
+
+## ant-design
+
+​	蚂蚁金服开发的用于react的UI组件库。
+
+​	官方网址：[Ant Design - 一套企业级 UI 设计语言和 React 组件库](https://ant.design/index-cn)
+
+### 使用方法
+
+​	首先先在脚手架里安装该模块。
+
+```bash
+npm install antd
+```
+
+​	随后在使用过程中不仅要引入模块，也要引入对应的样式
+
+```js
+import {Button} from 'antd';
+import 'antd/dist/antd.css';
+```
+
+​	具体各个组件的样式和使用方法可以参考官网：[组件总览 - Ant Design](https://ant.design/components/overview-cn/)
+
+这里以Button为例：
+
+```react
+import React from 'react';
+import {useNavigate} from "react-router-dom";
+import {Button} from 'antd';
+import 'antd/dist/antd.css';
+//不仅要引入组件，而且还要引入样式
+export default function Header(props) {
+    const Navigate = useNavigate()
+    return (
+            <div className="col-xs-offset-2 col-xs-8">
+                <div className="page-header"><h2>React Router Demo</h2></div>
+                &nbsp;&nbsp;&nbsp;
+                <Button type="primary" onClick={()=>{Navigate(1)}}>前进</Button>
+                {/*通过Navigate(1)来实现前进和后退*/}
+                &nbsp;
+                <Button type="primary" danger onClick={()=>{Navigate(-1)}}>后退</Button>
+            </div>
+    );
+}
+```
+
+### 按需引入组件
+
+[在 create-react-app 中使用 - Ant Design](https://3x.ant.design/docs/react/use-with-create-react-app-cn)参考这篇文章里的高级配置一栏。
+
+​	直接引入antd.css可能会太大，如果想要继续优化的可以采用按需引入的方式，但是需要暴露脚手架的默认配置（暴露的行为是不可逆的）。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228105943.png)
+
+
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228110002.png)
+
+
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228110024.png)
+
+### 自定义主题
+
+​	因为antd的默认主题颜色是与支付宝一致的蓝色，如果想改成其他颜色的话，我们需要进行自定义主题，同样这部分的具体操作参考[在 create-react-app 中使用 - Ant Design](https://3x.ant.design/docs/react/use-with-create-react-app-cn)下的自定义主题部分。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228110216.png)
+
+
+
+PS：less是啥？
+
+> Less 是一门 CSS 预处理语言，它扩展了 CSS 语言，增加了变量、Mixin、函数等特性，使 CSS 更易维护和扩展。
+>
+> Less 可以运行在 Node 或浏览器端。
+
+# Redux
+
+redux的内容暂时跳过，下面一段引用阮一峰的话：
+
+
+
+​	首先明确一点，Redux 是一个有用的架构，但不是非用不可。事实上，大多数情况，你可以不用它，只用 React 就够了。
+
+​	曾经有人说过这样一句话。
+
+> "如果你不知道是否需要 Redux，那就是不需要它。"
+
+​	Redux 的创造者 Dan Abramov 又补充了一句。
+
+> "只有遇到 React 实在解决不了的问题，你才需要 Redux 。"
+
+
+
+# 打包react项目
+
+​	把我们写的react项目打包成起来，放在服务器上运行。
+
+​	使用下面的命令进行打包：
+
+```
+npm run build
+```
+
+​	打包完成后在同目录下回多一个build文件夹，该文件夹内部就是打包完毕的内容。接下来我们可以把它放到服务器上运行，可以放在node或者java编写的服务器，也可以借助serve模块快速开启一台服务器。
+
+​	node服务器和java服务器的部分之后再补充。
+
+## node服务器
+
+
+
+## java服务器
+
+
+
+## serve模块
+
+​	首先全局安装serve模块。
+
+```bash
+npm install serve -g
+```
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228111634.png)
+
+之后运行下面命令
+
+```bash
+serve build
+```
+
+该命令会把当前文件夹作为服务器的根目录进行启动。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228113753.png)
+
+之后可以在浏览器访问3000端口，显示正常：
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228114031.png)
+
+
+
+想要关闭服务器的话直接ctrl+c即可！
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228114152.png)
+
+
+
+### 遇到的问题
+
+1.全局安装serve后
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228113836.png)
+
+> 参考[(82条消息) npm : 无法加载文件 D:\nodejs\npm.ps1，因为在此系统上禁止运行脚本。_WebView-CSDN博客_nodejs 因为在此系统上禁止运行脚本](https://blog.csdn.net/weixin_45416217/article/details/105860904)
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228113909.png)2.npm全局安装的模块组件都在C:\Users\Administrator.DESKTOP-VDATQMB\AppData\Roaming\npm这个目录下，需要打开查看隐藏目录，因为AppData是隐藏的。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220228113945.png)
