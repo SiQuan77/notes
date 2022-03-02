@@ -1802,7 +1802,7 @@ changeOrigin:true加了之后，服务器收到的请求头中的host是localhos
 npm install pubsub-js
 ```
 
-2.先订阅再发布。需要接收信息的组件是订阅方，需要传送数据出去的组件是发布方。
+2.先订阅再发布。需要接收信息的组件是**订阅方**，需要传送数据出去的组件是发布方。
 
 ```js
 PubSub.publish('status',data)
@@ -1850,7 +1850,6 @@ export default class Search extends Component {
         if(!value.trim()) return alert('please input a word')
         // this.props.updateAppState({isFirst:false, isLoading:true})
         PubSub.publish("user_date_of_github",{isFirst:false, isLoading:true})
-
         // 3. 发送请求获取数据
         axios.get(`https://api.github.com/search/users?q=${value}`).then(
             response => {
@@ -2658,3 +2657,158 @@ export default function App(props) {
 ​	组件里的语法要求必须被<div>包裹，这对包裹的div也会被渲染到最终页面上，如果我们不想要div包裹，则可以使用<Fragment>对包裹，不过需要从React库中引入Fragment组件。
 
 ​	也可以直接使用空标签包裹，即<> xxxx</>
+
+## Context
+
+### 用途	
+
+​	Context主要用于祖组件和孙组件进行通信。
+
+### 用法
+
+​	通过React.createContext来创建Context对象，之后使用Provider把需要传递值的子组件包裹起来，并且把需要传递的内容（可以是对象）放在value里，子孙组件要取值时，在需要取值的部分使用Consumer包裹起来，直接通过value就可以取到context传递的值。
+
+```js
+import React from 'react';
+import "./app.css"
+//如果要通过Context直接给孙子组件传值，则需要创建context变量
+const MyContext = React.createContext();
+const {Provider,Consumer} =MyContext
+export default function App(props) {
+    const [username,setUsername]=React.useState("Jack");
+    return (
+        <div className={"grandcomponent"}>
+            <h1>我是App组件</h1>
+            <h1>我的用户名是：{username}</h1>
+            {/*将要通过Context传值的子组件用Provider包裹起来*/}
+            <Provider value={username}>
+                <Father_App username={username}/>
+            </Provider>
+        </div>
+    );
+}
+function Father_App(props) {
+    return (
+        <div className={"fathercomponent"}>
+            <h1>我是Father_App组件</h1>
+            {/*    父给子组件传递直接通过props传值，儿子组件通过props.自定义属性来取值*/}
+            <h1>我从APP得到的用户名是：{props.username}</h1>
+            {/*注意这里Father_App没有给Son_App传值*/}
+            <Son_App/>
+        </div>
+    );
+}
+function Son_App(props){
+    return(
+        <div className={"soncomponent"}>
+            <h1>我是Son_App组件</h1>
+            {/*孙组件要从子组件的部分要用Consumer包裹起来，写一个回调函数*/}
+            <Consumer>
+                {
+                    value =>{
+                        console.log(value)
+                       return  (<h1>我从App而不是FatherApp拿到的用户名是：{value}</h1>)
+                    //    这里return必须用()包裹，代表解析时应解析为js语句，
+                        //    这样h1标签才能正常被渲染
+                    }
+                }
+            </Consumer>
+        </div>
+    )
+}
+```
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220302145052.png)
+
+## ErrorBundary
+
+​	错误边界，主要用于将错误局限于最小化。比如某个小组件需要接收后端服务器传来的数组，但是后端传来了一个对象，这时如果对对象调用map函数就会报错，这个时候整个页面都无法显示。
+
+​	注意错误边界只能捕获后代组件生命周期产生的错误，不能捕获自己组件产生的错误和其他组件在**合成事件**、定时器中产生的错误。
+
+### 未使用错误边界
+
+​	即不用错误边界组件将代码包裹起来。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220302162249.png)
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220302162230.png)
+
+### 使用错误边界
+
+​	由于函数式组件是趋势，这里就介绍函数式组件的用法，但还是需要用类式组件来定义错误边界组件，因为类式组件里有getDerivedStateFromError函数，该函数是生命周期函数，**一旦后台组件报错**，就会触发。
+
+
+
+1.错误边界组件MyErrorBoundary.jsx
+
+```js
+import React, {Component} from 'react';
+import './app.css'
+export default class MyErrorBoundary extends Component {
+    state = {error: null,};
+    //生命周期函数，一旦后台组件报错，就会触发
+    static getDerivedStateFromError(error) {return { error: error };}
+    // componentDidCatch函数内部可以做错误上报的操作
+    componentDidCatch(error, info) {}
+    render() {
+        if (this.state.error) {
+            // 渲染出错时的 UI
+            return(
+                <div className={"fathercomponent"}>
+                    <p>出现错误了，请稍后再试！</p>
+                </div>
+            );
+        }
+        return this.props.children;
+    //    如果没有出错就正常渲染被MyErrorBoundary包裹的子组件
+    }
+}
+```
+
+2.在需要进行错误边界限制的父组件外部用该错误边界包裹起来
+
+（1）app.jsx
+
+```js
+import React from 'react';
+import Child from './child'
+import './app.css'
+import MyErrorBoundary from "./MyErrorBoundary";
+export default function App(props) {
+    return (
+        <div className={"grandcomponent"}>
+            <h1>我是App组件</h1>
+            <MyErrorBoundary>
+                <Child/>
+            </MyErrorBoundary>
+        </div>
+    );
+}
+```
+
+(2)会发生错误的子组件child.jsx
+
+```js
+import React, {Fragment, useState} from 'react';
+export default function Child(props) {
+    const [chucuo, setchucuo] = useState(1/0);
+    return (
+        <Fragment>
+            <h1>我是h2组件，我会出错！{chucuo.map(()=>{
+                return "haha"
+            })}</h1>
+        </Fragment>
+    );
+}
+```
+
+效果如下：
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220302162939.png)
+
+PS：A组件被B组件包裹时，B组件的props.child就是A组件，可以通过props的方式调用。
+
+## 组件之间通信总结
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220302163511.png)
