@@ -1,4 +1,4 @@
-# 前言
+前言
 
 > 此笔记参考[尚硅谷2021版React技术全家桶全套完整版（零基础入门到精通/男神天禹老师亲授）_哔哩哔哩_bilibili](https://www.bilibili.com/video/BV1Ey4y1u7vi?p=1)学习视频，感谢视频发布者和天禹老师！
 
@@ -1695,6 +1695,10 @@ todos.map((todoObj)=>({...todoObj,done}))
 
 ## 跨域问题
 
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/202207081126443.png)
+
+> 启动node服务器，即教程里给的测试用服务器，在根目录下用node ./server1.js启动
+
 ### 定义及发生时机
 
 1.定义和发生实际：
@@ -2812,3 +2816,118 @@ PS：A组件被B组件包裹时，B组件的props.child就是A组件，可以通
 ## 组件之间通信总结
 
 ![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/20220302163511.png)
+
+# 额外自己补充
+
+本单元主要写一些自己学完react之后，编写react程序时遇到的一些问题和注意点。
+
+## render函数在react18中不再被支持
+
+出现这个错误说明ReactDOM.render()方法在react18中已经不支持了，但是是警告，仍然可以运行。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/202207081035048.png)
+
+解决办法：
+
+把
+
+```javascript
+import React from "react";
+import ReactDOM from 'react-dom'
+import App from './App'
+
+ReactDOM.render(<App/>,document.getElementById('root'))
+```
+
+改成
+
+```javascript
+import React from "react";
+import App from "./App";
+
+import { createRoot } from 'react-dom/client';
+const container = document.getElementById('root');
+const root = createRoot(container);
+root.render(<App />)
+```
+
+## 重复刷新错误。Too many re-renders. React limits the number of renderers to prevent an infinite loop
+
+可以具体参考这篇文章的第三种[(100条消息) 3 种导致 React 无限循环的方式_小公鸡卡哇伊呀~的博客-CSDN博客_react无限循环](https://blog.csdn.net/ftell/article/details/123765383?spm=1001.2101.3001.6661.1&utm_medium=distribute.pc_relevant_t0.none-task-blog-2~default~CTRLIST~default-1-123765383-blog-119933741.pc_relevant_aa2&depth_1-utm_source=distribute.pc_relevant_t0.none-task-blog-2~default~CTRLIST~default-1-123765383-blog-119933741.pc_relevant_aa2&utm_relevant_index=1)
+
+> ​	这不是设置 event handler 的正确方法，你需要向 onClick 提供一个函数，而非函数执行的结果。 通过在设置 event handler 之前就执行函数，render 内部的状态将被更新，这会导致无限循环。
+
+![](https://cdn.jsdelivr.net/gh/SiQuan77/img_bed/202207081045657.png)
+
+​	场景：Todolist案例中的item组件，以下是正确写法
+
+```javascript
+export default function Item(props){
+  const [mouseIsEnter,setmouseIsEnter] = React.useState(false)
+  let handleMouse = (mouseIsEnter)=>{
+    return ()=>{
+      setmouseIsEnter(mouseIsEnter)
+    }
+  }
+  //错误写法：
+  //let handleMouse = (mouseIsEnter)=>{
+  //  setmouseIsEnter(mouseIsEnter)
+  //}
+  let handleDelete = (id)=>{
+    return () => {
+      if(window.confirm('确定删除吗？')){
+        props.deleteItem(id)
+      }
+    }
+  }
+  
+  let handleCheck = (id)=>{
+    return (event) =>{
+      props.updateItem(id,event.target.checked)
+    }
+  }
+    const {id, name, done} =props
+    return (
+      <li 
+        onMouseEnter={handleMouse(true)}
+        onMouseLeave={handleMouse(false)}
+        className={mouseIsEnter? 'active' : ''}
+      >
+        <label>
+          <input
+           type="checkbox"
+           checked={done} 
+           onChange={handleCheck(id)} />
+          <span>{name}</span>
+        </label>
+        <button 
+          className="btn btn-danger" 
+          style={{ display: mouseIsEnter ? "block" : "none" }}
+          onClick={handleDelete(id)}
+        >删除</button>
+      </li>
+    )
+}
+```
+
+​	其中的handleMouse必须写成高级函数，因为mouseIsEnter是state里的一个属性，如果写成普通的函数，**那么我们都知道在jsx中onClick类似的属性后面的函数名后加()之后，每次渲染页面就会自动调用**，handleMouse中会设置state中的mouseIsEnter属性值，mouseIsEnter属性值变化又会导致页面重新渲染，从而导致handleMouse函数又被调用，一直往复....
+
+​	这个时候就需要使用高级函数了，即函数返回一个函数。也可以这么写：
+
+```javascript
+...
+let handleMouse2 = (mouseIsEnter)=>{
+    setmouseIsEnter(mouseIsEnter)
+}
+...
+return (
+      <li 
+        onMouseEnter={() => {//这里写成函数形式就可以了
+          handleMouse2(true)
+        }}
+        onMouseLeave={handleMouse(false)}
+        className={mouseIsEnter? 'active' : ''}
+      >
+...
+```
+
